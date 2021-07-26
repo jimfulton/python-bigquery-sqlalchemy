@@ -40,6 +40,10 @@ from sqlalchemy.testing.suite import (
     TimestampMicrosecondsTest as _TimestampMicrosecondsTest,
 )
 
+# Recreate tables for each test
+import sqlalchemy.testing.fixtures
+sqlalchemy.testing.fixtures.TablesTest.run_define_tables = "each"
+
 
 if sqlalchemy.__version__ < "1.4":
     from sqlalchemy.testing.suite import LimitOffsetTest as _LimitOffsetTest
