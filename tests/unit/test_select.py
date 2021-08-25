@@ -432,3 +432,9 @@ def test_unnest_w_no_table_references(faux_conn, alias):
     assert " ".join(compiled.strip().split()) == (
         "SELECT `anon_1` FROM unnest(%(unnest_1)s) AS `anon_1`"
     )
+
+
+def test_select_struct_field(faux_conn):
+    from sqlalchemy_bigquery import RECORD
+
+    table = setup_table(faux_conn, "t", sqlalchemy.Column("objects", RECORD))

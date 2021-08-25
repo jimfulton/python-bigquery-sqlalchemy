@@ -47,7 +47,7 @@ from sqlalchemy.sql.compiler import (
     DDLCompiler,
     IdentifierPreparer,
 )
-from sqlalchemy.sql.sqltypes import Integer, String, NullType, Numeric
+from sqlalchemy.sql.sqltypes import Integer, String, NullType, Numeric, JSON
 from sqlalchemy.engine.default import DefaultDialect, DefaultExecutionContext
 from sqlalchemy.engine.base import Engine
 from sqlalchemy.sql.schema import Column
@@ -485,6 +485,11 @@ class BigQueryCompiler(SQLCompiler):
         skip_bind_expression=False,
         **kwargs,
     ):
+        type_ = bindparam.type
+        if isinstance(type_, JSON.JSONIndexType):
+            assert bindparam.value is not None
+            return str(bindparam.value)
+
         param = super(BigQueryCompiler, self).visit_bindparam(
             bindparam,
             within_columns_clause,
@@ -493,7 +498,6 @@ class BigQueryCompiler(SQLCompiler):
             **kwargs,
         )
 
-        type_ = bindparam.type
         if literal_binds or isinstance(type_, NullType):
             return param
 
@@ -531,6 +535,17 @@ class BigQueryCompiler(SQLCompiler):
                 param = f"%({name}:{bq_type})s"
 
         return param
+
+    def visit_json_getitem_op_binary(self, binary, operator_, **kw):
+        left = self.process(binary.left, **kw)
+        if (isinstance(binary.right, sqlalchemy.sql.elements.BindParameter)
+            and isinstance(binary.right.type, JSON.JSONStrIndexType)
+        ):
+            assert isinstance(binary.right.value, str)
+            return f"{left}.{binary.right.value}"
+        else:
+            right = self.process(binary.right, **kw)
+            return f"{left}[{right}]"
 
 
 class BigQueryTypeCompiler(GenericTypeCompiler):
